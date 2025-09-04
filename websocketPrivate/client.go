@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -19,12 +17,14 @@ const (
 
 var (
 	newline = []byte{'\n'}
-	space   = []byte{' '}
 )
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
 }
 
 type Client struct {
@@ -47,30 +47,17 @@ func (c *Client) readPump() {
 	})
 
 	for {
-		messageType, rawMessage, err := c.conn.ReadMessage()
+		var msg Message
+		err := c.conn.ReadJSON(&msg)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
 			break
 		}
+		msg.Sender = c.userID
+		c.hub.privateMessage <- msg
 
-		switch messageType {
-		case websocket.TextMessage, websocket.BinaryMessage:
-			var msg Message
-			if err := json.Unmarshal(rawMessage, &msg); err != nil {
-				log.Printf("Error unmarshalling message: %v", err)
-				continue
-			}
-
-			// ✅ UPDATED: Attach sender name
-			msg.Sender = c.userID
-
-			// ✅ UPDATED: Trim content as string (was []byte)
-			msg.Content = string(bytes.TrimSpace(bytes.Replace([]byte(msg.Content), newline, space, -1)))
-
-			c.hub.privateMessage <- msg
-		}
 	}
 }
 
