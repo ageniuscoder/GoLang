@@ -1,15 +1,14 @@
 package main
 
 import (
-	"encoding/json" // ✅ UPDATED
+	"encoding/json"
 	"log"
 )
 
-// ✅ UPDATED: Added Sender field and changed Content to string
 type Message struct {
-	Sender    string `json:"sender"` // ✅ UPDATED
+	Sender    string `json:"sender"`
 	Recipient string `json:"recipient"`
-	Content   string `json:"content"` // ✅ UPDATED (was []byte)
+	Content   string `json:"content"`
 }
 
 type Hub struct {
@@ -44,7 +43,6 @@ func (h *Hub) run() {
 
 		case message := <-h.privateMessage:
 			if recipient, ok := h.clients[message.Recipient]; ok {
-				// ✅ UPDATED: Marshal sender + content into JSON
 				jsonResponse, err := json.Marshal(map[string]string{
 					"sender":  message.Sender,
 					"content": message.Content,
@@ -55,7 +53,7 @@ func (h *Hub) run() {
 				}
 
 				select {
-				case recipient.send <- jsonResponse: // ✅ UPDATED
+				case recipient.send <- jsonResponse:
 					log.Printf("Message sent from %s to %s", message.Sender, message.Recipient)
 				default:
 					close(recipient.send)
