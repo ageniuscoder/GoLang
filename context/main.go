@@ -9,9 +9,10 @@ import (
 
 func main() {
 	var wg sync.WaitGroup
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 
+	// Generic generator function
 	genrator := func(dataItem string, stream chan interface{}) {
 		for {
 			select {
@@ -22,30 +23,27 @@ func main() {
 		}
 	}
 
+	// Create channels
 	infinitApples := make(chan interface{})
-	wg.Add(1)
-	go genrator("apple", infinitApples)
-
 	infinitBanana := make(chan interface{})
-	go genrator("banana", infinitBanana)
-
 	infinitMango := make(chan interface{})
+
+	// Start generators
+	go genrator("apple", infinitApples)
+	go genrator("banana", infinitBanana)
 	go genrator("mango", infinitMango)
 
+	// Consumers
 	wg.Add(1)
-	go func1(ctx, &wg, infinitApples)
-
-	func2 := genricFunc
-	func3 := genricFunc
+	go func1(ctx, &wg, infinitApples) // apple consumer will stop after 5s
 
 	wg.Add(1)
-	go func2(ctx, &wg, infinitBanana)
+	go genricFunc(ctx, &wg, infinitBanana) // keep running forever
 
 	wg.Add(1)
-	go func3(ctx, &wg, infinitMango)
+	go genricFunc(ctx, &wg, infinitMango) // keep running forever
 
 	wg.Wait()
-
 }
 
 func func1(ctx context.Context, parentWg *sync.WaitGroup, stream <-chan interface{}) {
@@ -53,8 +51,12 @@ func func1(ctx context.Context, parentWg *sync.WaitGroup, stream <-chan interfac
 
 	var wg sync.WaitGroup
 
+	// Create a 5-second timeout context for apples only
+	newCtx, cancel := context.WithTimeout(ctx, 5*time.Millisecond)
+	defer cancel()
+
 	dowork := func(ctx context.Context) {
-		wg.Done()
+		defer wg.Done()
 
 		for {
 			select {
@@ -62,7 +64,7 @@ func func1(ctx context.Context, parentWg *sync.WaitGroup, stream <-chan interfac
 				return
 			case d, ok := <-stream:
 				if !ok {
-					fmt.Println("channel closed")
+					fmt.Println("apple channel closed")
 					return
 				}
 				fmt.Println(d)
@@ -70,19 +72,17 @@ func func1(ctx context.Context, parentWg *sync.WaitGroup, stream <-chan interfac
 		}
 	}
 
-	newCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
-	defer cancel()
-
+	// Start 3 apple consumers
 	for i := 0; i < 3; i++ {
 		wg.Add(1)
 		go dowork(newCtx)
 	}
 
-	wg.Wait()
+	wg.Wait() // wait until all apple consumers finish
 }
 
 func genricFunc(ctx context.Context, wg *sync.WaitGroup, stream <-chan interface{}) {
-	wg.Done()
+	defer wg.Done()
 
 	for {
 		select {
