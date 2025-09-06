@@ -35,13 +35,13 @@ func main() {
 
 	// Consumers
 	wg.Add(1)
-	go func1(ctx, &wg, infinitApples) // apple consumer will stop after 5s
+	go func1(ctx, &wg, infinitApples) // apple consumer will stop after 5ms
 
 	wg.Add(1)
-	go genricFunc(ctx, &wg, infinitBanana) // keep running forever
+	go genricFunc(ctx, &wg, infinitBanana) // keep running till 10ms
 
 	wg.Add(1)
-	go genricFunc(ctx, &wg, infinitMango) // keep running forever
+	go genricFunc(ctx, &wg, infinitMango) // keep running till 10ms
 
 	wg.Wait()
 }
@@ -51,7 +51,7 @@ func func1(ctx context.Context, parentWg *sync.WaitGroup, stream <-chan interfac
 
 	var wg sync.WaitGroup
 
-	// Create a 5-second timeout context for apples only
+	// Create a 5ms timeout context for apples only
 	newCtx, cancel := context.WithTimeout(ctx, 5*time.Millisecond)
 	defer cancel()
 
